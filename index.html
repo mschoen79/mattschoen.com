@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Matthew Schoen – Product owner and technologist building AI-native solutions for the electronics industry.">
+    <title>Matthew Schoen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --green-bright: #00ff41;
+            --green-mid: #00cc33;
+            --green-dim: #00802b;
+            --green-faint: #004d1a;
+            --green-glow: rgba(0, 255, 65, 0.15);
+            --green-glow-strong: rgba(0, 255, 65, 0.3);
+            --bg-primary: #0a0a0a;
+            --bg-card: rgba(0, 255, 65, 0.03);
+            --bg-card-border: rgba(0, 255, 65, 0.12);
+            --text-primary: #c8f7c8;
+            --text-dim: #5a8a5a;
+        }
+
+        body.red-pill {
+            --green-bright: #ff0040;
+            --green-mid: #cc0033;
+            --green-dim: #800020;
+            --green-faint: #4d0013;
+            --green-glow: rgba(255, 0, 64, 0.15);
+            --green-glow-strong: rgba(255, 0, 64, 0.3);
+            --bg-card: rgba(255, 0, 64, 0.03);
+            --bg-card-border: rgba(255, 0, 64, 0.12);
+            --text-primary: #f7c8d0;
+            --text-dim: #8a5a62;
+        }
+        body.red-pill #matrix-canvas { filter: hue-rotate(280deg); }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Fira Code', monospace;
+            overflow-x: hidden;
+            min-height: 100vh;
+            transition: all 0.8s ease;
+        }
+
+        #matrix-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            opacity: 0.12;
+            transition: opacity 0.5s, filter 0.8s;
+        }
+
+        .scanlines {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; z-index: 1;
+            pointer-events: none;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+        }
+
+        .vignette {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; z-index: 1;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.6) 100%);
+        }
+
+        .content {
+            position: relative; z-index: 2;
+            max-width: 780px; margin: 0 auto;
+            padding: 60px 24px 80px;
+            transition: transform 1s ease;
+        }
+
+        .terminal {
+            background: rgba(5, 15, 5, 0.85);
+            border: 1px solid var(--bg-card-border);
+            border-radius: 8px; overflow: hidden;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 40px rgba(0,255,65,0.05), inset 0 0 80px rgba(0,255,65,0.02);
+            animation: fadeInTerminal 1s ease-out;
+            transition: border-color 0.8s, box-shadow 0.8s;
+        }
+
+        @keyframes fadeInTerminal {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .terminal-bar {
+            display: flex; align-items: center; gap: 8px;
+            padding: 12px 16px;
+            background: rgba(0, 255, 65, 0.04);
+            border-bottom: 1px solid var(--bg-card-border);
+        }
+
+        .terminal-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            background: var(--green-dim); opacity: 0.6;
+            cursor: pointer; transition: transform 0.15s;
+        }
+        .terminal-dot:hover { transform: scale(1.2); }
+        .terminal-dot:first-child { background: #ff5f57; opacity: 0.7; }
+        .terminal-dot:nth-child(2) { background: #ffbd2e; opacity: 0.7; }
+        .terminal-dot:nth-child(3) { background: #28c840; opacity: 0.7; }
+
+        .terminal-title {
+            margin-left: 12px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px; color: var(--text-dim);
+            letter-spacing: 1px; cursor: pointer;
+            transition: color 0.3s;
+        }
+        .terminal-title:hover { color: var(--green-bright); }
+
+        .terminal-body { padding: 32px 28px 40px; }
+
+        .prompt {
+            color: var(--green-mid);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 13px; letter-spacing: 0.5px;
+            margin-bottom: 4px; opacity: 0;
+            animation: typeLine 0.3s ease forwards;
+        }
+
+        .name-heading {
+            font-size: clamp(28px, 5vw, 42px);
+            font-weight: 700; color: var(--green-bright);
+            line-height: 1.1; margin-bottom: 4px;
+            text-shadow: 0 0 20px rgba(0,255,65,0.4), 0 0 60px rgba(0,255,65,0.1);
+            opacity: 0; animation: typeLine 0.4s ease 0.2s forwards;
+            cursor: default; user-select: none;
+            transition: color 0.8s, text-shadow 0.8s;
+        }
+
+        .cursor {
+            display: inline-block; width: 2px; height: 1em;
+            background: var(--green-bright); margin-left: 4px;
+            vertical-align: text-bottom;
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .tagline {
+            font-size: 14px; color: var(--text-dim);
+            margin-bottom: 32px; font-weight: 300;
+            letter-spacing: 0.5px; opacity: 0;
+            animation: typeLine 0.4s ease 0.4s forwards;
+        }
+
+        @keyframes typeLine {
+            from { opacity: 0; transform: translateX(-8px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .section { margin-bottom: 28px; opacity: 0; animation: typeLine 0.4s ease forwards; }
+        .section:nth-child(4) { animation-delay: 0.6s; }
+        .section:nth-child(5) { animation-delay: 0.8s; }
+        .section:nth-child(6) { animation-delay: 1.0s; }
+        .section:nth-child(7) { animation-delay: 1.2s; }
+
+        .section-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 11px; text-transform: uppercase;
+            letter-spacing: 3px; color: var(--green-dim);
+            margin-bottom: 10px; display: flex;
+            align-items: center; gap: 10px;
+        }
+        .section-label::after {
+            content: ''; flex: 1; height: 1px;
+            background: linear-gradient(to right, var(--green-faint), transparent);
+        }
+
+        .section-text { font-size: 14px; line-height: 1.75; color: var(--text-primary); font-weight: 300; }
+        .highlight { color: var(--green-bright); font-weight: 500; transition: color 0.8s; }
+        .comment { color: var(--text-dim); font-style: italic; }
+
+        .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+        .tag {
+            font-size: 12px; padding: 5px 14px;
+            border: 1px solid var(--bg-card-border); border-radius: 3px;
+            color: var(--green-mid); background: var(--bg-card);
+            letter-spacing: 0.5px; transition: all 0.2s ease; cursor: default;
+        }
+        .tag:hover {
+            border-color: var(--green-mid);
+            background: rgba(0,255,65,0.08);
+            box-shadow: 0 0 12px rgba(0,255,65,0.1);
+        }
+
+        .links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 4px; }
+        .link {
+            font-size: 13px; padding: 8px 20px;
+            border: 1px solid var(--green-dim); border-radius: 3px;
+            color: var(--green-bright); background: transparent;
+            text-decoration: none; font-family: 'Fira Code', monospace;
+            letter-spacing: 0.5px; transition: all 0.25s ease;
+            position: relative; overflow: hidden;
+        }
+        .link::before {
+            content: '>'; margin-right: 8px; opacity: 0;
+            transition: all 0.25s ease; display: inline-block;
+            transform: translateX(-8px);
+        }
+        .link:hover::before { opacity: 1; transform: translateX(0); }
+        .link:hover {
+            background: rgba(0,255,65,0.1); border-color: var(--green-bright);
+            box-shadow: 0 0 20px rgba(0,255,65,0.15); padding-left: 28px;
+        }
+
+        .footer {
+            margin-top: 40px; padding-top: 20px;
+            border-top: 1px solid var(--bg-card-border);
+            font-size: 11px; color: var(--text-dim);
+            font-family: 'Share Tech Mono', monospace;
+            letter-spacing: 1px; display: flex;
+            justify-content: space-between; align-items: center;
+            opacity: 0; animation: typeLine 0.4s ease 1.4s forwards;
+        }
+
+        .status-dot {
+            display: inline-block; width: 7px; height: 7px;
+            border-radius: 50%; background: var(--green-bright);
+            margin-right: 8px;
+            box-shadow: 0 0 8px rgba(0,255,65,0.6);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        /* ====== CMD LINE ====== */
+        .cmd-line { margin-top: 24px; display: none; opacity: 0; transition: opacity 0.3s; }
+        .cmd-line.active { display: block; opacity: 1; }
+        .cmd-output {
+            font-size: 12px; color: var(--text-dim); line-height: 1.6;
+            margin-bottom: 8px; max-height: 450px; overflow-y: auto;
+            white-space: pre-wrap; word-break: break-word;
+        }
+        .cmd-output .cmd-green { color: var(--green-bright); }
+        .cmd-output .cmd-highlight { color: var(--green-mid); }
+        .cmd-input-row { display: flex; align-items: center; gap: 8px; }
+        .cmd-prefix {
+            color: var(--green-mid); font-family: 'Share Tech Mono', monospace;
+            font-size: 13px; white-space: nowrap;
+        }
+        .cmd-input {
+            flex: 1; background: transparent; border: none; outline: none;
+            color: var(--green-bright); font-family: 'Fira Code', monospace;
+            font-size: 13px; caret-color: var(--green-bright);
+        }
+
+        /* ====== GLITCH ====== */
+        @keyframes glitch {
+            0% { transform: translate(0); filter: none; }
+            10% { transform: translate(-3px, 2px); filter: hue-rotate(90deg); }
+            20% { transform: translate(3px, -2px); filter: hue-rotate(180deg); }
+            30% { transform: translate(-2px, -1px); filter: hue-rotate(270deg); }
+            40% { transform: translate(2px, 1px); }
+            60% { transform: translate(1px, -1px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); filter: none; }
+        }
+        .glitching { animation: glitch 0.5s ease-in-out; }
+
+        /* ====== TOAST ====== */
+        .toast {
+            position: fixed; bottom: 30px; left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: rgba(5, 15, 5, 0.95);
+            border: 1px solid var(--green-mid);
+            color: var(--green-bright);
+            font-family: 'Fira Code', monospace; font-size: 13px;
+            padding: 12px 24px; border-radius: 6px; z-index: 1000;
+            opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: none; box-shadow: 0 0 30px rgba(0,255,65,0.2);
+            white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* ====== GAME OVERLAY ====== */
+        .game-overlay {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; z-index: 100;
+            background: rgba(0,0,0,0.92); display: none;
+            flex-direction: column; align-items: center;
+            justify-content: center; backdrop-filter: blur(4px);
+        }
+        .game-overlay.active { display: flex; }
+
+        .game-container {
+            position: relative;
+            width: min(500px, 90vw); height: min(600px, 75vh);
+            border: 1px solid var(--green-dim); border-radius: 6px;
+            overflow: hidden; background: rgba(5, 15, 5, 0.9);
+        }
+        .game-hud {
+            position: absolute; top: 0; left: 0; right: 0;
+            padding: 12px 16px; display: flex; justify-content: space-between;
+            font-family: 'Share Tech Mono', monospace; font-size: 13px;
+            color: var(--green-bright); z-index: 2;
+            background: linear-gradient(to bottom, rgba(5,15,5,0.9), transparent);
+        }
+        .game-canvas { width: 100%; height: 100%; }
+
+        .game-title-screen {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 16px; z-index: 3; background: rgba(5, 15, 5, 0.95);
+        }
+        .game-title-screen.hidden { display: none; }
+
+        .game-title {
+            font-family: 'Fira Code', monospace;
+            font-size: clamp(20px, 4vw, 32px); font-weight: 700;
+            color: var(--green-bright);
+            text-shadow: 0 0 20px rgba(0,255,65,0.5);
+            text-align: center;
+        }
+        .game-subtitle {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 13px; color: var(--text-dim);
+            text-align: center; max-width: 320px; line-height: 1.5;
+        }
+        .game-start-btn {
+            margin-top: 12px; padding: 10px 32px;
+            border: 1px solid var(--green-bright);
+            background: rgba(0,255,65,0.08);
+            color: var(--green-bright);
+            font-family: 'Fira Code', monospace; font-size: 14px;
+            border-radius: 4px; cursor: pointer;
+            transition: all 0.2s; letter-spacing: 1px;
+        }
+        .game-start-btn:hover {
+            background: rgba(0,255,65,0.2);
+            box-shadow: 0 0 20px rgba(0,255,65,0.2);
+        }
+        .game-close-btn {
+            position: absolute; top: 16px; right: 16px;
+            background: none; border: 1px solid var(--text-dim);
+            color: var(--text-dim); font-family: 'Fira Code', monospace;
+            font-size: 12px; padding: 4px 12px; border-radius: 3px;
+            cursor: pointer; z-index: 10; transition: all 0.2s;
+        }
+        .game-close-btn:hover { border-color: var(--green-bright); color: var(--green-bright); }
+        .game-score-final {
+            font-family: 'Fira Code', monospace; font-size: 18px;
+            color: var(--green-bright); margin-bottom: 4px;
+        }
+
+        /* ====== ASCII POPUP ====== */
+        .ascii-popup {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background: rgba(5, 15, 5, 0.97);
+            border: 1px solid var(--green-mid); border-radius: 8px;
+            padding: 28px 36px; z-index: 200;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px; color: var(--green-bright);
+            white-space: pre; line-height: 1.2;
+            text-shadow: 0 0 8px rgba(0,255,65,0.4);
+            box-shadow: 0 0 60px rgba(0,255,65,0.15);
+            opacity: 0; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: none; display: none;
+        }
+        .ascii-popup.show {
+            display: block; opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+            pointer-events: auto;
+        }
+        .ascii-close {
+            display: block; text-align: center; margin-top: 16px;
+            color: var(--text-dim); font-size: 11px; cursor: pointer;
+        }
+        .ascii-close:hover { color: var(--green-bright); }
+
+        /* ====== FIRE IN THE HOLE ====== */
+        .runner-container {
+            position: fixed; bottom: 80px; left: -100px; z-index: 150;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 18px; color: var(--green-bright);
+            white-space: pre; line-height: 1;
+            text-shadow: 0 0 8px rgba(0,255,65,0.6);
+            pointer-events: none;
+        }
+
+        .explosion-overlay {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; z-index: 200;
+            pointer-events: none; opacity: 0;
+            background: radial-gradient(circle at center, #ff4400, #ff8800, #ffcc00, transparent 70%);
+            transition: opacity 0.08s;
+        }
+        .explosion-overlay.flash { opacity: 0.9; }
+        .explosion-overlay.fade { transition: opacity 0.8s; opacity: 0; }
+
+        .explosion-particles {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; z-index: 199;
+            pointer-events: none; overflow: hidden;
+        }
+        .particle {
+            position: absolute; font-size: 14px;
+            pointer-events: none;
+            animation: particleFly 1.2s ease-out forwards;
+        }
+        @keyframes particleFly {
+            0% { opacity: 1; transform: translate(0, 0) scale(1); }
+            100% { opacity: 0; transform: translate(var(--px), var(--py)) scale(0.3); }
+        }
+
+        @keyframes screenShake {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            10% { transform: translate(-12px, 8px) rotate(-1.5deg); }
+            20% { transform: translate(10px, -10px) rotate(1.5deg); }
+            30% { transform: translate(-14px, 6px) rotate(-2deg); }
+            40% { transform: translate(8px, -8px) rotate(1deg); }
+            50% { transform: translate(-8px, 10px) rotate(-1deg); }
+            60% { transform: translate(12px, -6px) rotate(1.5deg); }
+            70% { transform: translate(-6px, 8px) rotate(-0.5deg); }
+            80% { transform: translate(6px, -4px) rotate(0.5deg); }
+            90% { transform: translate(-4px, 2px) rotate(-0.5deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+        .screen-shake { animation: screenShake 0.6s ease-in-out; }
+
+        @media (max-width: 600px) {
+            .content { padding: 30px 12px 60px; }
+            .terminal-body { padding: 24px 18px 32px; }
+            .footer { flex-direction: column; gap: 8px; text-align: center; }
+            .ascii-popup { font-size: 7px; padding: 16px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix-canvas"></canvas>
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+    <div class="toast" id="toast"></div>
+
+    <div class="ascii-popup" id="ascii-popup">
+ __  __       _   _   
+|  \/  | __ _| |_| |_ 
+| |\/| |/ _` | __| __|
+| |  | | (_| | |_| |_ 
+|_|  |_|\__,_|\__|\__|
+ ____       _                      
+/ ___|  ___| |__   ___   ___ _ __  
+\___ \ / __| '_ \ / _ \ / _ \ '_ \ 
+ ___) | (__| | | | (_) |  __/ | | |
+|____/ \___|_| |_|\___/ \___|_| |_|
+
+    [ SYSTEM ARCHITECT // CODE ARTISAN ]
+        <span class="ascii-close" onclick="closeAscii()">[click to close]</span></div>
+
+    <div class="runner-container" id="runner"></div>
+    <div class="explosion-overlay" id="explosion-overlay"></div>
+    <div class="explosion-particles" id="explosion-particles"></div>
+
+    <div class="game-overlay" id="game-overlay">
+        <div class="game-container">
+            <button class="game-close-btn" onclick="closeGame()">ESC</button>
+            <div class="game-hud" id="game-hud" style="display:none;">
+                <span id="game-score-display">SCORE: 0</span>
+                <span id="game-lives-display">LIVES: ███</span>
+            </div>
+            <canvas class="game-canvas" id="game-canvas"></canvas>
+            <div class="game-title-screen" id="game-title-screen">
+                <div class="game-title">MATRIX DODGER</div>
+                <div class="game-subtitle">
+                    Dodge the falling code.<br>
+                    Use <span style="color:var(--green-bright)">← →</span> or <span style="color:var(--green-bright)">A / D</span> to move.<br>
+                    Collect <span style="color:var(--green-bright)">green glyphs</span> for points.<br>
+                    Avoid <span style="color:#ff0040">red glyphs</span>.
+                </div>
+                <div class="game-score-final" id="game-over-score" style="display:none;"></div>
+                <button class="game-start-btn" id="game-start-btn" onclick="startGame()">JACK IN</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="content">
+        <div class="terminal" id="terminal">
+            <div class="terminal-bar">
+                <div class="terminal-dot" id="dot-red"></div>
+                <div class="terminal-dot" id="dot-yellow"></div>
+                <div class="terminal-dot" id="dot-green"></div>
+                <span class="terminal-title" id="terminal-title" title="Click me...">matt@schoen ~ /about</span>
+            </div>
+            <div class="terminal-body">
+
+                <div class="prompt">$ whoami</div>
+                <h1 class="name-heading" id="name-heading">Matthew Schoen<span class="cursor"></span></h1>
+                <p class="tagline">Product Owner &bull; Technologist &bull; Builder</p>
+
+                <div class="section">
+                    <div class="section-label">// about</div>
+                    <p class="section-text">
+                        Co-Founder of <span class="highlight">Devbot</span>, a leader in video game outsourcing. Building scalable solutions at the intersection of gaming, technology, and product strategy.
+                    </p>
+                </div>
+
+                <div class="section">
+                    <div class="section-label">// current_project</div>
+                    <p class="section-text">
+                        <span class="highlight">RiparianAi</span> — An AI-native platform for PCB lifecycle management. Engineering Bill of Materials, Approved Vendor Lists, design validation, and intelligent data exchange built on industry standards like <span class="highlight">IPC-2581</span>.
+                    </p>
+                </div>
+
+                <div class="section">
+                    <div class="section-label">// skills</div>
+                    <div class="tags">
+                        <span class="tag">Product Ownership</span>
+                        <span class="tag">AI / LLM Integration</span>
+                        <span class="tag">Cloud Infrastructure</span>
+                        <span class="tag">Data Transformation</span>
+                        <span class="tag">PCB / Electronics</span>
+                        <span class="tag">API Design</span>
+                        <span class="tag">Technical Documentation</span>
+                        <span class="tag">Cloudflare Workers</span>
+                        <span class="tag">PowerShell</span>
+                        <span class="tag">Alteryx</span>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-label">// interests</div>
+                    <p class="section-text">
+                        <span class="comment">/* beyond the day job */</span><br>
+                        Licensed pyrotechnician, electronics tinkering, automation, carpentry, and building out a Sprinter van.
+                    </p>
+                </div>
+
+                <div class="section">
+                    <div class="section-label">// connect</div>
+                    <div class="links">
+                        <a href="https://github.com/mattschoen" class="link">GitHub</a>
+                        <a href="https://linkedin.com/in/mattschoen" class="link">LinkedIn</a>
+                        <a href="mailto:matt@mattschoen.com" class="link">Email</a>
+                    </div>
+                </div>
+
+                <div class="footer">
+                    <span><span class="status-dot"></span>Devbot — Let's build your next game.</span>
+                    <span>&copy; 2026 Matthew Schoen</span>
+                </div>
+
+                <div class="cmd-line" id="cmd-line">
+                    <div class="cmd-output" id="cmd-output"></div>
+                    <div class="cmd-input-row">
+                        <span class="cmd-prefix">matt@schoen:~$</span>
+                        <input class="cmd-input" id="cmd-input" type="text" spellcheck="false" autocomplete="off">
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // =============================================
+        // MATRIX RAIN
+        // =============================================
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF{}[]<>/\\|=+-*&^%$#@!';
+        const fontSize = 14;
+        let columns = Math.floor(canvas.width / fontSize);
+        let drops = Array(columns).fill(1);
+
+        window.addEventListener('resize', () => {
+            columns = Math.floor(canvas.width / fontSize);
+            drops = Array(columns).fill(1);
+        });
+
+        let matrixSpeed = 1;
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(10, 10, 10, 0.06)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = document.body.classList.contains('red-pill') ? '#ff0040' : '#00ff41';
+            ctx.font = fontSize + "px 'Share Tech Mono', monospace";
+
+            for (let i = 0; i < drops.length; i++) {
+                const char = chars[Math.floor(Math.random() * chars.length)];
+                ctx.globalAlpha = 0.4 + Math.random() * 0.6;
+                ctx.fillText(char, i * fontSize, drops[i] * fontSize);
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i] += matrixSpeed;
+            }
+            ctx.globalAlpha = 1;
+            requestAnimationFrame(drawMatrix);
+        }
+        drawMatrix();
+
+        // =============================================
+        // TOAST
+        // =============================================
+        let toastTimer;
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+        }
+
+        // =============================================
+        // EASTER EGG 1: KONAMI CODE → RED PILL MODE
+        // =============================================
+        const konamiSequence = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+        let konamiIndex = 0;
+        let redPillActive = false;
+
+        function toggleRedPill() {
+            redPillActive = !redPillActive;
+            document.body.classList.toggle('red-pill', redPillActive);
+            if (redPillActive) {
+                showToast('You took the red pill...');
+                matrixSpeed = 3; canvas.style.opacity = '0.3';
+                setTimeout(() => { matrixSpeed = 1; canvas.style.opacity = '0.12'; }, 3000);
+            } else {
+                showToast('Back in the Matrix.');
+            }
+        }
+
+        // =============================================
+        // EASTER EGG 2: CLICK TITLE BAR → HIDDEN TERMINAL
+        // =============================================
+        document.getElementById('terminal-title').addEventListener('click', () => {
+            const cmd = document.getElementById('cmd-line');
+            cmd.classList.toggle('active');
+            if (cmd.classList.contains('active')) {
+                document.getElementById('cmd-input').focus();
+                if (!document.getElementById('cmd-output').innerHTML) {
+                    appendOutput('<span class="cmd-green">Terminal unlocked.</span> Type <span class="cmd-highlight">help</span> for commands.\n');
+                }
+            }
+        });
+
+        // =============================================
+        // HIDDEN TERMINAL COMMANDS
+        // =============================================
+        const cmdHistory = [];
+        let historyIndex = -1;
+
+        document.getElementById('cmd-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const input = e.target.value.trim();
+                e.target.value = '';
+                if (!input) return;
+                cmdHistory.unshift(input);
+                historyIndex = -1;
+                processCommand(input.toLowerCase());
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (historyIndex < cmdHistory.length - 1) {
+                    historyIndex++;
+                    e.target.value = cmdHistory[historyIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (historyIndex > 0) { historyIndex--; e.target.value = cmdHistory[historyIndex]; }
+                else { historyIndex = -1; e.target.value = ''; }
+            }
+        });
+
+        function appendOutput(html) {
+            const out = document.getElementById('cmd-output');
+            out.innerHTML += html;
+            out.scrollTop = out.scrollHeight;
+        }
+
+        function processCommand(cmd) {
+            appendOutput('<span class="cmd-highlight">$ ' + cmd + '</span>\n');
+
+            if (cmd.startsWith('echo ')) { appendOutput(cmd.slice(5) + '\n\n'); return; }
+
+            const commands = {
+                help: () => appendOutput('<span class="cmd-green">Available commands:</span>\n  help        Show this message\n  about       Quick bio\n  skills      List skills\n  play        Launch Matrix Dodger\n  fireinthehole  You have been warned\n  sudo        Try it...\n  redpill     Toggle red pill mode\n  matrix      Crank up the rain\n  neofetch    System info\n  aybabtu     You know what it is\n  whoami      Current user\n  ls          List files\n  pwd         Working directory\n  date        Current date\n  clear       Clear terminal\n  exit        Close terminal\n\n'),
+                about: () => appendOutput('<span class="cmd-green">Matthew Schoen</span>\n  Co-Founder of Devbot — leader in video game outsourcing\n  Licensed pyrotechnician / electronics tinker\n  Building out a Sprinter van\n\n'),
+                skills: () => appendOutput('<span class="cmd-green">cat skills.json</span>\n  {\n    "business": ["co-founder", "strategy", "outsourcing"],\n    "tech": ["AI/LLM", "cloud", "APIs", "automation"],\n    "hands-on": ["pyrotechnics", "electronics", "carpentry"],\n    "project": ["Sprinter van build", "Devbot"]\n  }\n\n'),
+                play: () => { appendOutput('<span class="cmd-green">Launching Matrix Dodger...</span>\n\n'); setTimeout(openGame, 300); },
+                fireinthehole: () => { appendOutput('<span class="cmd-green">FIRE IN THE HOLE!!!</span>\n\n'); runFireInTheHole(); },
+                sudo: () => {
+                    appendOutput('<span class="cmd-green">[sudo] password for matt: ********</span>\nSorry, Matt is not in the sudoers file.\nThis incident <span class="cmd-highlight">will</span> be reported.\n\n');
+                    document.getElementById('terminal').classList.add('glitching');
+                    setTimeout(() => document.getElementById('terminal').classList.remove('glitching'), 500);
+                },
+                'sudo rm -rf /': () => appendOutput('<span class="cmd-green">Nice try.</span>\n\n'),
+                redpill: () => { toggleRedPill(); appendOutput('<span class="cmd-green">Reality shifted.</span>\n\n'); },
+                matrix: () => {
+                    appendOutput('<span class="cmd-green">Overclocking the Matrix...</span>\n\n');
+                    matrixSpeed = 4; canvas.style.opacity = '0.35';
+                    setTimeout(() => { matrixSpeed = 1; canvas.style.opacity = '0.12'; }, 5000);
+                },
+                clear: () => { document.getElementById('cmd-output').innerHTML = ''; },
+                exit: () => { document.getElementById('cmd-line').classList.remove('active'); },
+                neofetch: () => appendOutput('<span class="cmd-green">\n  matt@schoen\n  -----------\n  OS:     MatrixOS 1.0\n  Host:   mattschoen.com\n  Shell:  msh 4.2.0\n  Theme:  ' + (redPillActive ? 'Red Pill' : 'Green Rain') + ' [dark]\n  CPU:    Caffeinated Human @ ~3GHz\n  Memory: Full of PCB specs\n  Uptime: Since the 90s\n</span>\n\n'),
+                aybabtu: () => appendOutput('<span class="cmd-green">\n       *         .    *       .       *    .    *\n  .       _______________          .        .\n     .   /               \\    *        .\n   *    |  ____________   |      .          *\n        | |            |  |  .        *\n    .   | |    CATS    |  |     ___===~~~\n        | |   >>====>  |  |  ~~~         ~~~\n   *    | |____________|  |    .    *\n  .     |   __   __   __  |        .     .\n        |  [__] [__] [__] | .          *\n    .    \\_________________/     .\n  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n  In A.D. 2101, war was beginning...\n\n  CATS: All your base are belong to us.\n        You have no chance to survive\n        make your time.\n        Ha Ha Ha Ha....\n</span>\n\n'),
+                whoami: () => appendOutput('matt\n\n'),
+                pwd: () => appendOutput('/home/matt/portfolio\n\n'),
+                ls: () => appendOutput('about.md  skills.json  projects/  trains/  secrets/\n\n'),
+                'ls secrets': () => appendOutput('<span class="cmd-green">Nice try.</span> Permission denied.\n\n'),
+                'cat /etc/passwd': () => appendOutput('root:x:0:0:The Matrix has you...:/root\n\n'),
+                date: () => appendOutput(new Date().toString() + '\n\n'),
+                echo: () => appendOutput('echo: missing argument\n\n'),
+                hack: () => {
+                    appendOutput('<span class="cmd-green">Initiating hack sequence...</span>\n');
+                    let i = 0;
+                    const interval = setInterval(() => {
+                        const fake = Array.from({length: 40}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+                        appendOutput(fake + '\n');
+                        i++;
+                        if (i > 8) {
+                            clearInterval(interval);
+                            appendOutput('<span class="cmd-green">ACCESS GRANTED</span> (just kidding)\n\n');
+                        }
+                    }, 150);
+                },
+            };
+
+            if (commands[cmd]) { commands[cmd](); }
+            else { appendOutput('command not found: ' + cmd + '. Try <span class="cmd-highlight">help</span>\n\n'); }
+        }
+
+        // =============================================
+        // EASTER EGG 3: TRIPLE-CLICK NAME → ASCII ART
+        // =============================================
+        let nameClickCount = 0, nameClickTimer;
+        document.getElementById('name-heading').addEventListener('click', () => {
+            nameClickCount++;
+            clearTimeout(nameClickTimer);
+            nameClickTimer = setTimeout(() => nameClickCount = 0, 400);
+            if (nameClickCount >= 3) {
+                nameClickCount = 0;
+                document.getElementById('ascii-popup').classList.add('show');
+            }
+        });
+
+        function closeAscii() { document.getElementById('ascii-popup').classList.remove('show'); }
+
+        // =============================================
+        // EASTER EGG 4: RED DOT RAPID CLICK → GLITCH
+        // =============================================
+        let redDotClicks = 0, redDotTimer;
+        document.getElementById('dot-red').addEventListener('click', () => {
+            redDotClicks++;
+            clearTimeout(redDotTimer);
+            redDotTimer = setTimeout(() => redDotClicks = 0, 2000);
+            if (redDotClicks >= 5) {
+                redDotClicks = 0;
+                document.body.classList.add('glitching');
+                canvas.style.opacity = '0.5';
+                showToast('SYSTEM INSTABILITY DETECTED');
+                setTimeout(() => { document.body.classList.remove('glitching'); canvas.style.opacity = '0.12'; }, 1500);
+            }
+        });
+
+        // =============================================
+        // FIRE IN THE HOLE
+        // =============================================
+        let fireRunning = false;
+        function runFireInTheHole() {
+            if (fireRunning) return;
+            fireRunning = true;
+
+            const runner = document.getElementById('runner');
+            const runFrames = [
+                ' o \n/|\\\\\n/ \\',
+                ' o \n |>\n/ <',
+                '\\o/\n | \n/ \\'
+            ];
+            let frame = 0;
+            let posX = -60;
+            const speed = 18;
+            const screenW = window.innerWidth;
+
+            showToast('FIRE IN THE HOLE!!!');
+
+            // Animate runner across screen
+            const runInterval = setInterval(() => {
+                runner.textContent = runFrames[frame % runFrames.length];
+                runner.style.left = posX + 'px';
+                frame++;
+                posX += speed;
+
+                if (posX > screenW + 60) {
+                    clearInterval(runInterval);
+                    runner.textContent = '';
+                    triggerExplosion();
+                }
+            }, 60);
+        }
+
+        function triggerExplosion() {
+            const overlay = document.getElementById('explosion-overlay');
+            const particles = document.getElementById('explosion-particles');
+
+            // Flash
+            overlay.className = 'explosion-overlay flash';
+            canvas.style.opacity = '0.5';
+
+            // Screen shake
+            document.body.classList.add('screen-shake');
+
+            // Spawn particles
+            const explosionChars = ['*', '✦', '◆', '●', '✸', '💥', '🔥', '※', '⬥', '✹'];
+            const colors = ['#ff4400', '#ff8800', '#ffcc00', '#ff0040', '#ff6600', '#ffffff'];
+            for (let i = 0; i < 40; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.textContent = explosionChars[Math.floor(Math.random() * explosionChars.length)];
+                p.style.left = (window.innerWidth / 2 + (Math.random() - 0.5) * 200) + 'px';
+                p.style.top = (window.innerHeight / 2 + (Math.random() - 0.5) * 200) + 'px';
+                p.style.color = colors[Math.floor(Math.random() * colors.length)];
+                p.style.fontSize = (12 + Math.random() * 24) + 'px';
+                p.style.setProperty('--px', (Math.random() - 0.5) * 800 + 'px');
+                p.style.setProperty('--py', (Math.random() - 0.5) * 800 + 'px');
+                particles.appendChild(p);
+            }
+
+            // Fade and cleanup
+            setTimeout(() => {
+                overlay.className = 'explosion-overlay fade';
+            }, 100);
+
+            setTimeout(() => {
+                document.body.classList.remove('screen-shake');
+                canvas.style.opacity = '0.12';
+            }, 600);
+
+            setTimeout(() => {
+                overlay.className = 'explosion-overlay';
+                particles.innerHTML = '';
+                fireRunning = false;
+            }, 1500);
+        }
+
+        // =============================================
+        // EASTER EGG 6: SECRET PHRASES (type anywhere)
+        // =============================================
+        let secretBuffer = '';
+        document.addEventListener('keypress', (e) => {
+            if (document.activeElement === document.getElementById('cmd-input')) return;
+            if (document.getElementById('game-overlay').classList.contains('active') && gameRunning) return;
+
+            secretBuffer += e.key.toLowerCase();
+            if (secretBuffer.length > 30) secretBuffer = secretBuffer.slice(-30);
+
+            if (secretBuffer.includes('wake up')) {
+                secretBuffer = '';
+                showToast('Wake up, Matt... The Matrix has you...');
+                canvas.style.opacity = '0.4'; matrixSpeed = 3;
+                setTimeout(() => {
+                    showToast('Follow the white rabbit.');
+                    canvas.style.opacity = '0.12'; matrixSpeed = 1;
+                }, 3500);
+            }
+            if (secretBuffer.includes('there is no spoon')) {
+                secretBuffer = '';
+                showToast('...it is not the spoon that bends, it is only yourself.');
+                const c = document.querySelector('.content');
+                c.style.transform = 'perspective(500px) rotateY(5deg)';
+                setTimeout(() => c.style.transform = 'none', 2000);
+            }
+            if (secretBuffer.includes('fire')) {
+                secretBuffer = '';
+                runFireInTheHole();
+            }
+        });
+
+        // =============================================
+        // GLOBAL KEYBOARD HANDLER
+        // =============================================
+        document.addEventListener('keydown', (e) => {
+            // Konami
+            if (!(document.getElementById('game-overlay').classList.contains('active') && gameRunning)) {
+                const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+                if (key === konamiSequence[konamiIndex]) {
+                    konamiIndex++;
+                    if (konamiIndex === konamiSequence.length) { konamiIndex = 0; toggleRedPill(); }
+                } else {
+                    konamiIndex = key === konamiSequence[0] ? 1 : 0;
+                }
+            }
+
+            // Escape closes things
+            if (e.key === 'Escape') {
+                closeAscii();
+                if (document.getElementById('game-overlay').classList.contains('active')) closeGame();
+            }
+
+            // Game keys
+            gameKeys[e.key] = true;
+        });
+        document.addEventListener('keyup', (e) => { gameKeys[e.key] = false; });
+
+        // =============================================
+        // MINI GAME: MATRIX DODGER
+        // =============================================
+        const gameCanvas = document.getElementById('game-canvas');
+        const gCtx = gameCanvas.getContext('2d');
+        let gameRunning = false, gameScore = 0, gameLives = 3, gameAnimFrame;
+        let player, fallingItems, gameSpawnTimer, gameDifficulty;
+        const gameKeys = {};
+
+        function openGame() {
+            const overlay = document.getElementById('game-overlay');
+            overlay.classList.add('active');
+            document.getElementById('game-title-screen').classList.remove('hidden');
+            document.getElementById('game-hud').style.display = 'none';
+            document.getElementById('game-over-score').style.display = 'none';
+            document.getElementById('game-start-btn').textContent = 'JACK IN';
+            const container = gameCanvas.parentElement;
+            gameCanvas.width = container.clientWidth;
+            gameCanvas.height = container.clientHeight;
+        }
+
+        function closeGame() {
+            gameRunning = false;
+            cancelAnimationFrame(gameAnimFrame);
+            document.getElementById('game-overlay').classList.remove('active');
+        }
+
+        function startGame() {
+            const container = gameCanvas.parentElement;
+            gameCanvas.width = container.clientWidth;
+            gameCanvas.height = container.clientHeight;
+
+            document.getElementById('game-title-screen').classList.add('hidden');
+            document.getElementById('game-hud').style.display = 'flex';
+
+            gameScore = 0; gameLives = 3; gameDifficulty = 1;
+            fallingItems = []; gameSpawnTimer = 0;
+            player = {
+                x: gameCanvas.width / 2 - 15,
+                y: gameCanvas.height - 50,
+                width: 30, height: 30, speed: 5
+            };
+
+            gameRunning = true;
+            updateHUD();
+            gameLoop();
+        }
+
+        function updateHUD() {
+            document.getElementById('game-score-display').textContent = 'SCORE: ' + gameScore;
+            document.getElementById('game-lives-display').textContent = 'LIVES: ' + '\u2588'.repeat(gameLives) + '\u2591'.repeat(Math.max(0, 3 - gameLives));
+        }
+
+        // Touch controls
+        gameCanvas.addEventListener('touchmove', (e) => {
+            if (!gameRunning) return;
+            e.preventDefault();
+            const rect = gameCanvas.getBoundingClientRect();
+            player.x = e.touches[0].clientX - rect.left - player.width / 2;
+            player.x = Math.max(0, Math.min(gameCanvas.width - player.width, player.x));
+        }, { passive: false });
+
+        function spawnItem() {
+            const isGood = Math.random() > 0.35;
+            const glyphs = isGood ? 'アイウエオカキクケコ0123456789' : '\u00D7\u25A0\u25AC\u25BC\u25C6\u25CF';
+            fallingItems.push({
+                x: Math.random() * (gameCanvas.width - 20),
+                y: -20, width: 20, height: 20,
+                speed: 1.5 + Math.random() * gameDifficulty,
+                isGood,
+                char: glyphs[Math.floor(Math.random() * glyphs.length)]
+            });
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            // Semi-transparent fill for trail effect
+            gCtx.fillStyle = 'rgba(5, 15, 5, 0.3)';
+            gCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+            // Player movement
+            if (gameKeys['ArrowLeft'] || gameKeys['a'] || gameKeys['A']) player.x -= player.speed;
+            if (gameKeys['ArrowRight'] || gameKeys['d'] || gameKeys['D']) player.x += player.speed;
+            player.x = Math.max(0, Math.min(gameCanvas.width - player.width, player.x));
+
+            // Draw player
+            gCtx.fillStyle = '#00ff41';
+            gCtx.shadowColor = '#00ff41';
+            gCtx.shadowBlur = 12;
+            gCtx.font = "bold 24px 'Fira Code', monospace";
+            gCtx.fillText('\u25B2', player.x, player.y + player.height);
+            gCtx.shadowBlur = 0;
+
+            // Spawn
+            gameSpawnTimer++;
+            const spawnRate = Math.max(12, 35 - gameDifficulty * 3);
+            if (gameSpawnTimer >= spawnRate) { spawnItem(); gameSpawnTimer = 0; }
+
+            // Update items
+            for (let i = fallingItems.length - 1; i >= 0; i--) {
+                const item = fallingItems[i];
+                item.y += item.speed;
+
+                gCtx.font = "18px 'Share Tech Mono', monospace";
+                gCtx.fillStyle = item.isGood ? '#00ff41' : '#ff0040';
+                gCtx.shadowColor = gCtx.fillStyle;
+                gCtx.shadowBlur = item.isGood ? 6 : 8;
+                gCtx.fillText(item.char, item.x, item.y);
+                gCtx.shadowBlur = 0;
+
+                // Collision
+                if (item.x < player.x + player.width && item.x + item.width > player.x &&
+                    item.y < player.y + player.height && item.y + item.height > player.y) {
+                    if (item.isGood) { gameScore += 10; }
+                    else {
+                        gameLives--;
+                        gCtx.fillStyle = 'rgba(255, 0, 64, 0.15)';
+                        gCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+                    }
+                    fallingItems.splice(i, 1);
+                    updateHUD();
+                    continue;
+                }
+
+                if (item.y > gameCanvas.height + 20) fallingItems.splice(i, 1);
+            }
+
+            gameDifficulty = 1 + Math.floor(gameScore / 100) * 0.5;
+
+            if (gameLives <= 0) { gameRunning = false; gameOver(); return; }
+            gameAnimFrame = requestAnimationFrame(gameLoop);
+        }
+
+        function gameOver() {
+            gCtx.fillStyle = 'rgba(5, 15, 5, 0.8)';
+            gCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+            document.getElementById('game-title-screen').classList.remove('hidden');
+            document.getElementById('game-over-score').style.display = 'block';
+            document.getElementById('game-over-score').textContent = 'FINAL SCORE: ' + gameScore;
+            document.getElementById('game-start-btn').textContent = 'JACK IN AGAIN';
+            document.getElementById('game-hud').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
